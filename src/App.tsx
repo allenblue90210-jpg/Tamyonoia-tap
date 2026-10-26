@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { sound } from './sound';
 
 type GameState = 'menu' | 'ready' | 'play' | 'dead' | 'quit';
 
@@ -131,6 +132,13 @@ export default function App() {
       h: 50,
     });
 
+    const getMuteRect = (): Rect => ({
+      x: W - 58,
+      y: 14 + safeTop,
+      w: 46,
+      h: 46,
+    });
+
     const reset = () => {
       const cx = W / 2;
       const skyH = getSkyH();
@@ -221,8 +229,10 @@ export default function App() {
     const getSpeed = () => BASE_SPD + Math.min(score * 0.15, 1.5);
 
     const die = () => {
+      if (state === 'dead') return;
       state = 'dead';
       frame = 0;
+      sound.playFail();
       if (score > best) {
         best = score;
         try {
@@ -240,24 +250,34 @@ export default function App() {
       }
       if (state === 'play') {
         cat.v = FLAP;
+        sound.playFlap();
       } else if (state === 'dead' && frame > 26) {
+        sound.playUiTap();
         state = 'ready';
         reset();
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      sound.unlock();
+      if (e.code === 'KeyM') {
+        sound.toggleMute();
+        return;
+      }
       if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') {
         e.preventDefault();
         if (state === 'quit') {
+          sound.playUiTap();
           state = 'menu';
         } else if (state === 'menu') {
+          sound.playUiTap();
           state = 'ready';
           reset();
         } else {
           flap();
         }
       } else if (e.code === 'Escape' && (state === 'ready' || state === 'dead')) {
+        sound.playUiTap();
         state = 'menu';
         reset();
       }
@@ -265,6 +285,7 @@ export default function App() {
 
     const handlePointerDown = (e: PointerEvent) => {
       e.preventDefault();
+      sound.unlock();
       const rect = cv.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
 
@@ -272,6 +293,7 @@ export default function App() {
       const y = ((e.clientY - rect.top) * H) / rect.height;
 
       if (state === 'quit') {
+        sound.playUiTap();
         state = 'menu';
         return;
       }
@@ -279,16 +301,23 @@ export default function App() {
       if (state === 'menu') {
         const { startBtn, quitBtn } = getMenuRects();
         if (inRect(x, y, startBtn, 6)) {
+          sound.playUiTap();
           state = 'ready';
           reset();
         } else if (inRect(x, y, quitBtn, 6)) {
+          sound.playUiTap();
           state = 'quit';
         }
         return;
       }
 
       if ((state === 'dead' && frame > 20) || state === 'ready') {
+        if (inRect(x, y, getMuteRect(), 12)) {
+          sound.toggleMute();
+          return;
+        }
         if (inRect(x, y, getBackRect(), 12)) {
+          sound.playUiTap();
           state = 'menu';
           reset();
           return;
@@ -350,6 +379,7 @@ export default function App() {
           if (!p.p && p.x + PW < cat.x) {
             p.p = true;
             score++;
+            sound.playScore();
           }
 
           const hit = HB.some(([ox, oy, R]) => {
@@ -574,10 +604,58 @@ export default function App() {
         g.fillText(`Best: ${best}`, cx, uiY + 524);
       }
 
-      // Back button in ready & dead states
+      // Back & Sound toggle buttons in ready & dead states
       if (state === 'ready' || state === 'dead') {
         const b = getBackRect();
         drawSpriteCrisp(imgs[4], b.x, b.y, b.w, 4);
+
+        const m = getMuteRect();
+        const muted = sound.isMuted();
+        g.save();
+        const mGrad = g.createLinearGradient(m.x, m.y, m.x, m.y + m.h);
+        mGrad.addColorStop(0, '#1448d6');
+        mGrad.addColorStop(1, '#081f66');
+        g.fillStyle = mGrad;
+        g.strokeStyle = muted ? '#6b86b8' : '#5ff2ff';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.roundRect(m.x, m.y, m.w, m.h, 10);
+        g.fill();
+        g.stroke();
+
+        // Speaker icon
+        const sx = m.x + m.w * 0.5;
+        const sy = m.y + m.h * 0.5;
+        g.fillStyle = muted ? '#8ca5d4' : '#ffffff';
+        g.beginPath();
+        g.moveTo(sx - 10, sy - 4);
+        g.lineTo(sx - 5, sy - 4);
+        g.lineTo(sx + 1, sy - 10);
+        g.lineTo(sx + 1, sy + 10);
+        g.lineTo(sx - 5, sy + 4);
+        g.lineTo(sx - 10, sy + 4);
+        g.closePath();
+        g.fill();
+
+        g.strokeStyle = muted ? '#ff6b8b' : '#5ff2ff';
+        g.lineWidth = 2.2;
+        g.lineCap = 'round';
+        if (muted) {
+          g.beginPath();
+          g.moveTo(sx + 5, sy - 5);
+          g.lineTo(sx + 12, sy + 5);
+          g.moveTo(sx + 12, sy - 5);
+          g.lineTo(sx + 5, sy + 5);
+          g.stroke();
+        } else {
+          g.beginPath();
+          g.arc(sx + 2, sy, 5.5, -0.65, 0.65);
+          g.stroke();
+          g.beginPath();
+          g.arc(sx + 2, sy, 9.5, -0.65, 0.65);
+          g.stroke();
+        }
+        g.restore();
       }
 
       // Menu overlay
