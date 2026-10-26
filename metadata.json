@@ -1,6 +1,6 @@
 {
-  "name": "Robo Cat Flap",
-  "description": "An arcade robo-cat flying game where players navigate neon obstacles in cyber space.",
+  "name": "Tamyonoia Tap",
+  "description": "High-speed cyber robo-cat arcade tap game — dodge oscillating neon gates in deep space.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
