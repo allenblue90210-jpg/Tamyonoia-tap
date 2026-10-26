@@ -1,0 +1,6 @@
+{
+  "name": "Robo Cat Flap",
+  "description": "An arcade robo-cat flying game where players navigate neon obstacles in cyber space.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
